@@ -612,6 +612,14 @@ Potential additions to consider:
 
 ## FAQ
 
+**Q: What if I see "Error Loading Application - Required libraries failed to load: Recharts"?**
+A: This has been fixed with automatic CDN fallback. If you still experience issues:
+- Try refreshing the page (Ctrl+Shift+R or Cmd+Shift+R)
+- Disable browser extensions (especially ad blockers)
+- Try a different browser (Chrome recommended)
+- Check your internet connection
+- See `CDN_FALLBACK.md` for detailed troubleshooting
+
 **Q: Can I use this offline?**
 A: After the first load, the application caches all CDN resources, so it will work offline.
 
@@ -633,6 +641,7 @@ For questions or issues:
 1. Review the baked-in assumptions section at the bottom of the webpage
 2. Check the original Excel model (`TSA Model (3).xlsx`) for reference
 3. Review the source code in `index.html` for calculation logic
+4. For CDN/loading issues, see `CDN_FALLBACK.md`
 
 ## License
 
@@ -640,6 +649,11 @@ This model is provided as-is for financial planning and analysis purposes.
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: January 2024  
+**Version**: 1.1  
+**Last Updated**: January 2026  
 **Based on**: TSA Financial Model (December 2024 assumptions)
+
+**Recent Updates**:
+- Fixed Recharts CDN loading issues with automatic fallback mechanism
+- Downgraded to Recharts 2.1.16 for better stability
+- Added comprehensive error handling and user guidance
