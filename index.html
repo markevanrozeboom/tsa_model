@@ -412,10 +412,16 @@
 
         // Simple Icon components using Lucide
         const Icon = ({ name, size = 18, className = '' }) => {
+          const iconRef = React.useRef(null);
+          
           React.useEffect(() => {
-            lucide.createIcons();
-          }, []);
+            if (iconRef.current && window.lucide) {
+              lucide.createIcons({ icons: { [name]: lucide[name] }, nameAttr: 'data-lucide' });
+            }
+          }, [name]);
+          
           return React.createElement('i', { 
+            ref: iconRef,
             'data-lucide': name, 
             className,
             style: { width: size, height: size }
@@ -506,6 +512,7 @@
           const [activeScenario, setActiveScenario] = useState('base');
           const [activeTab, setActiveTab] = useState('overview');
           const [showAdvanced, setShowAdvanced] = useState(false);
+          const [showAssumptions, setShowAssumptions] = useState(false);
           const [monteCarloResults, setMonteCarloResults] = useState(null);
           const [isRunningMC, setIsRunningMC] = useState(false);
           
@@ -999,15 +1006,16 @@
                 {/* Baked Assumptions Reference */}
                 <div className="bg-white rounded-xl shadow-sm border p-6">
                   <button
-                    onClick={() => document.getElementById('assumptions').classList.toggle('hidden')}
+                    onClick={() => setShowAssumptions(!showAssumptions)}
                     className="flex items-center gap-2 font-semibold text-gray-900 w-full"
                   >
                     <Icon name="building-2" size={20} />
                     Baked-In Assumptions (Reference)
-                    <Icon name="chevron-down" size={18} className="ml-auto" />
+                    <Icon name={showAssumptions ? 'chevron-up' : 'chevron-down'} size={18} className="ml-auto" />
                   </button>
                   
-                  <div id="assumptions" className="hidden mt-4 pt-4 border-t">
+                  {showAssumptions && (
+                  <div className="mt-4 pt-4 border-t">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm">
                       <div>
                         <h4 className="font-semibold text-blue-700 mb-2">Virtual Schools</h4>
@@ -1055,6 +1063,7 @@
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
                 
                 <div className="mt-4 text-center text-xs text-gray-500">
@@ -1065,14 +1074,16 @@
           );
         }
 
-        // Initialize Lucide icons after component mount
-        React.useEffect(() => {
-          lucide.createIcons();
-        });
-
         // Render the app
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<TSAScenarioModel />);
+        
+        // Initialize Lucide icons after initial render
+        setTimeout(() => {
+          if (window.lucide) {
+            lucide.createIcons();
+          }
+        }, 0);
     </script>
 </body>
 </html>
