@@ -47,7 +47,7 @@ window.addEventListener('load', function() {
 
 ### 3. Error Detection
 
-The application includes a built-in error detection script that checks if all required libraries have loaded after 2 seconds. If any library is missing, it displays a helpful error message with troubleshooting steps.
+The application includes a built-in error detection script that checks if all required libraries have loaded after 3 seconds. If any library is missing, it displays a helpful error message with troubleshooting steps. This delay allows time for the CDN fallback mechanism to activate and load the library from an alternative source.
 
 ## Technical Details
 

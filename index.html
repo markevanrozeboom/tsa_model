@@ -28,7 +28,7 @@
                     console.warn('Recharts failed to load from unpkg, trying jsdelivr...');
                     var script = document.createElement('script');
                     script.src = 'https://cdn.jsdelivr.net/npm/recharts@2.1.16/dist/Recharts.js';
-                    script.crossOrigin = 'anonymous';
+                    script.setAttribute('crossorigin', 'anonymous');
                     script.onerror = function() {
                         console.error('Recharts failed to load from both CDNs');
                     };
