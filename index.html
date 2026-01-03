@@ -20,15 +20,22 @@
     
     <!-- Fallback loader for Recharts if unpkg fails -->
     <script>
-        window.addEventListener('load', function() {
-            // Check if Recharts loaded, if not, try jsdelivr as fallback
-            if (typeof Recharts === 'undefined') {
-                var script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/recharts@2.1.16/dist/Recharts.js';
-                script.crossOrigin = 'anonymous';
-                document.head.appendChild(script);
-            }
-        });
+        (function() {
+            // Wait for scripts to fully load before checking
+            setTimeout(function() {
+                // Check if Recharts loaded, if not, try jsdelivr as fallback
+                if (typeof Recharts === 'undefined') {
+                    console.warn('Recharts failed to load from unpkg, trying jsdelivr...');
+                    var script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/recharts@2.1.16/dist/Recharts.js';
+                    script.crossOrigin = 'anonymous';
+                    script.onerror = function() {
+                        console.error('Recharts failed to load from both CDNs');
+                    };
+                    document.head.appendChild(script);
+                }
+            }, 500); // Give primary CDN 500ms to load
+        })();
     </script>
     
     <!-- Lucide Icons -->
@@ -57,7 +64,8 @@
     <!-- Error detection script -->
     <script>
         // Detect if critical libraries failed to load
-        var LOAD_CHECK_DELAY_MS = 2000;
+        // Increased to 3000ms to allow time for CDN fallback to load
+        var LOAD_CHECK_DELAY_MS = 3000;
         
         window.addEventListener('load', function() {
             setTimeout(function() {
