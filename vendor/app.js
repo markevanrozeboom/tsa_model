@@ -198,30 +198,23 @@ function calculateModel(params, trajectories) {
     let midSizedStudents = 0;
     midSizedSchoolAges.forEach(age => {
       const fillRate = BASE_ASSUMPTIONS.midSized.fillRates[Math.min(age, 3)];
-      midSizedStudents += studentsPerMidSized * fillRate;
+      midSizedStudents += Math.round(studentsPerMidSized * fillRate);
     });
-    midSizedStudents = Math.round(midSizedStudents);
-    const midSizedTuition = BASE_ASSUMPTIONS.midSized.tuition;
-    const midSizedRevenue = midSizedStudents * midSizedTuition;
+    const midSizedRevenue = midSizedStudents * BASE_ASSUMPTIONS.midSized.tuition;
     const midSizedTimeback = midSizedStudents * BASE_ASSUMPTIONS.midSized.timeback;
+    const midSizedExpenses = midSizedStudents * (BASE_ASSUMPTIONS.midSized.tuition * 0.6) * params.costInflation;
+    const midSizedEBITDA = midSizedRevenue - midSizedExpenses;
 
     // Mid-sized CapEx
-    const avgPurchase = BASE_ASSUMPTIONS.midSized.purchaseRenovated * BASE_ASSUMPTIONS.midSized.blendRatio + BASE_ASSUMPTIONS.midSized.purchaseNewBuild * (1 - BASE_ASSUMPTIONS.midSized.blendRatio);
-    const avgCapex = BASE_ASSUMPTIONS.midSized.capexRenovated * BASE_ASSUMPTIONS.midSized.blendRatio + BASE_ASSUMPTIONS.midSized.capexNewBuild * (1 - BASE_ASSUMPTIONS.midSized.blendRatio);
-    const midSizedCapex = i === 0 ? 25000000 : newMidSized * (avgPurchase + avgCapex);
-
-    // Operating costs (simplified)
-    const midSizedOpex = midSizedStudents * 12000 * params.costInflation;
-    const midSizedNewStudents = Math.round(newMidSized * studentsPerMidSized * 0.33);
-    const midSizedMarketing = midSizedNewStudents * (BASE_ASSUMPTIONS.midSized.tofMarketing + BASE_ASSUMPTIONS.midSized.bofMarketing);
-    const midSizedEBITDA = midSizedRevenue - midSizedOpex - midSizedMarketing;
+    const midSizedCapexPerSchool = (BASE_ASSUMPTIONS.midSized.purchaseRenovated + BASE_ASSUMPTIONS.midSized.capexRenovated) * BASE_ASSUMPTIONS.midSized.blendRatio + (BASE_ASSUMPTIONS.midSized.purchaseNewBuild + BASE_ASSUMPTIONS.midSized.capexNewBuild) * (1 - BASE_ASSUMPTIONS.midSized.blendRatio);
+    const midSizedCapex = newMidSized * midSizedCapexPerSchool;
     prevMidSizedSchools = midSizedSchools;
 
     // Flagship Schools
     const flagshipSchools = trajectories.flagshipSchools[i];
     const newFlagship = Math.max(0, flagshipSchools - prevFlagshipSchools);
 
-    // Update school ages
+    // Update flagship ages
     flagshipSchoolAges = flagshipSchoolAges.map(age => age + 1);
     for (let j = 0; j < newFlagship; j++) {
       flagshipSchoolAges.push(0);
@@ -229,117 +222,111 @@ function calculateModel(params, trajectories) {
     let flagshipStudents = 0;
     flagshipSchoolAges.forEach(age => {
       const fillRate = BASE_ASSUMPTIONS.flagship.fillRates[Math.min(age, 4)];
-      flagshipStudents += BASE_ASSUMPTIONS.flagship.studentsPerSchool * fillRate;
+      flagshipStudents += Math.round(BASE_ASSUMPTIONS.flagship.studentsPerSchool * fillRate);
     });
-    flagshipStudents = Math.round(flagshipStudents);
     const flagshipRevenue = flagshipStudents * BASE_ASSUMPTIONS.flagship.tuition;
     const flagshipTimeback = flagshipStudents * BASE_ASSUMPTIONS.flagship.timeback;
+    const flagshipExpenses = flagshipStudents * (BASE_ASSUMPTIONS.flagship.tuition * 0.55) * params.costInflation;
+    const flagshipEBITDA = flagshipRevenue - flagshipExpenses;
     const flagshipCapex = newFlagship * params.flagshipCapex;
-    const flagshipOpex = flagshipStudents * 15000 * params.costInflation;
-    const flagshipNewStudents = Math.round(newFlagship * BASE_ASSUMPTIONS.flagship.studentsPerSchool * 0.33);
-    const flagshipMarketing = flagshipNewStudents * (BASE_ASSUMPTIONS.flagship.tofMarketing + BASE_ASSUMPTIONS.flagship.bofMarketing);
-    const flagshipEBITDA = flagshipRevenue - flagshipOpex - flagshipMarketing;
     prevFlagshipSchools = flagshipSchools;
 
     // Totals
     const totalStudents = virtualStudents + microStudents + midSizedStudents + flagshipStudents;
     const totalRevenue = virtualRevenue + microRevenue + midSizedRevenue + flagshipRevenue;
-    const totalTimeback = virtualTimeback + microTimeback + midSizedTimeback + flagshipTimeback;
     const totalEBITDA = virtualEBITDA + microEBITDA + midSizedEBITDA + flagshipEBITDA;
+    const totalTimeback = virtualTimeback + microTimeback + midSizedTimeback + flagshipTimeback;
     const totalCapex = midSizedCapex + flagshipCapex;
     const netCashFlow = totalEBITDA - totalCapex;
     years.push({
       year,
-      yearIndex: i,
-      // Students
       virtualStudents,
-      microStudents,
-      midSizedStudents,
-      flagshipStudents,
-      totalStudents,
-      // Schools
-      microSchools,
-      midSizedSchools,
-      flagshipSchools,
-      // Revenue
       virtualRevenue,
-      microRevenue,
-      midSizedRevenue,
-      flagshipRevenue,
-      totalRevenue,
-      // EBITDA
       virtualEBITDA,
+      virtualTimeback,
+      microSchools,
+      microStudents,
+      microRevenue,
       microEBITDA,
+      microTimeback,
+      midSizedSchools,
+      midSizedStudents,
+      midSizedRevenue,
       midSizedEBITDA,
-      flagshipEBITDA,
-      totalEBITDA,
-      // CapEx
+      midSizedTimeback,
       midSizedCapex,
+      flagshipSchools,
+      flagshipStudents,
+      flagshipRevenue,
+      flagshipEBITDA,
+      flagshipTimeback,
       flagshipCapex,
-      totalCapex,
-      // Cash Flow
-      netCashFlow,
-      // Timeback
+      totalStudents,
+      totalRevenue,
+      totalEBITDA,
       totalTimeback,
-      // Margins
+      totalCapex,
+      netCashFlow,
+      cumulativeCashFlow: 0,
+      // Will calculate below
       ebitdaMargin: totalRevenue > 0 ? totalEBITDA / totalRevenue : 0,
       timebackPct: totalRevenue > 0 ? totalTimeback / totalRevenue : 0
     });
   }
 
-  // Calculate cumulative values
-  let cumulativeCashFlow = 0;
-  let cumulativeCapex = 0;
-  let minCashFlow = 0;
-  years.forEach(year => {
-    cumulativeCashFlow += year.netCashFlow;
-    cumulativeCapex += year.totalCapex;
-    year.cumulativeCashFlow = cumulativeCashFlow;
-    year.cumulativeCapex = cumulativeCapex;
-    minCashFlow = Math.min(minCashFlow, cumulativeCashFlow);
+  // Calculate cumulative cash flow
+  let cumulative = 0;
+  years.forEach(y => {
+    cumulative += y.netCashFlow;
+    y.cumulativeCashFlow = cumulative;
   });
 
-  // Terminal value
-  const finalYear = years[years.length - 1];
-  const terminalValue = finalYear.totalEBITDA * params.ebitdaMultiple + cumulativeCapex * 0.8; // 80% of capex as property value
-
+  // Calculate summary metrics
+  const year10 = years[10];
+  const propertyValue = year10.midSizedSchools * 30000000 + year10.flagshipSchools * 100000000;
+  const terminalValue = year10.totalEBITDA * params.ebitdaMultiple + propertyValue;
+  const cumulativeCapex = years.reduce((sum, y) => sum + y.totalCapex, 0);
+  const peakFunding = Math.abs(Math.min(0, ...years.map(y => y.cumulativeCashFlow)));
+  const breakeven = years.findIndex(y => y.cumulativeCashFlow > 0);
   return {
     years,
     summary: {
-      totalStudents: finalYear.totalStudents,
-      totalRevenue: finalYear.totalRevenue,
-      totalEBITDA: finalYear.totalEBITDA,
-      ebitdaMargin: finalYear.ebitdaMargin,
-      totalTimeback: finalYear.totalTimeback,
-      timebackPct: finalYear.timebackPct,
-      cumulativeCapex,
+      totalStudents: year10.totalStudents,
+      totalRevenue: year10.totalRevenue,
+      totalEBITDA: year10.totalEBITDA,
+      ebitdaMargin: year10.ebitdaMargin,
       terminalValue,
-      peakFunding: Math.abs(minCashFlow),
-      breakeven: years.findIndex(y => y.cumulativeCashFlow > 0)
+      propertyValue,
+      cumulativeCapex,
+      peakFunding,
+      breakeven
     }
   };
 }
 
 // Monte Carlo simulation
-function runMonteCarlo(baseParams, trajectories, iterations = 500) {
+function runMonteCarlo(params, trajectories, iterations = 500) {
   const results = [];
   for (let i = 0; i < iterations; i++) {
-    const params = {
-      ...baseParams,
-      virtualGrowthMult: baseParams.virtualGrowthMult * (0.8 + Math.random() * 0.4),
-      microGrowthMult: baseParams.microGrowthMult * (0.7 + Math.random() * 0.6),
-      midSizedGrowthMult: baseParams.midSizedGrowthMult * (0.6 + Math.random() * 0.8),
-      costInflation: baseParams.costInflation * (0.9 + Math.random() * 0.2),
-      ebitdaMultiple: baseParams.ebitdaMultiple * (0.7 + Math.random() * 0.6)
+    // Randomize parameters with ±20% variation
+    const randomParams = {
+      virtualGrowthMult: params.virtualGrowthMult * (0.8 + Math.random() * 0.4),
+      microGrowthMult: params.microGrowthMult * (0.8 + Math.random() * 0.4),
+      midSizedGrowthMult: params.midSizedGrowthMult * (0.7 + Math.random() * 0.6),
+      flagshipCapex: params.flagshipCapex * (0.8 + Math.random() * 0.4),
+      ebitdaMultiple: params.ebitdaMultiple * (0.7 + Math.random() * 0.6),
+      costInflation: params.costInflation * (0.9 + Math.random() * 0.2)
     };
-    const model = calculateModel(params, trajectories);
+    const model = calculateModel(randomParams, trajectories);
     results.push({
       terminalValue: model.summary.terminalValue,
-      totalRevenue: model.summary.totalRevenue,
-      totalEBITDA: model.summary.totalEBITDA,
-      peakFunding: model.summary.peakFunding
+      revenue: model.summary.totalRevenue,
+      ebitda: model.summary.totalEBITDA,
+      students: model.summary.totalStudents
     });
   }
+
+  // Sort by terminal value
   results.sort((a, b) => a.terminalValue - b.terminalValue);
   return {
     p10: results[Math.floor(iterations * 0.1)],
@@ -347,55 +334,104 @@ function runMonteCarlo(baseParams, trajectories, iterations = 500) {
     p50: results[Math.floor(iterations * 0.5)],
     p75: results[Math.floor(iterations * 0.75)],
     p90: results[Math.floor(iterations * 0.9)],
-    distribution: results
+    mean: {
+      terminalValue: results.reduce((sum, r) => sum + r.terminalValue, 0) / iterations,
+      revenue: results.reduce((sum, r) => sum + r.revenue, 0) / iterations,
+      ebitda: results.reduce((sum, r) => sum + r.ebitda, 0) / iterations
+    },
+    all: results
   };
 }
 
 // Sensitivity analysis
-function runSensitivity(baseParams, trajectories, variable, range) {
+function runSensitivity(params, trajectories, paramName, range) {
   const results = [];
-  for (let mult = range[0]; mult <= range[1]; mult += (range[1] - range[0]) / 10) {
-    const params = {
-      ...baseParams,
-      [variable]: baseParams[variable] * mult
+  const steps = 21;
+  const [minMult, maxMult] = range;
+  for (let i = 0; i < steps; i++) {
+    const mult = minMult + (maxMult - minMult) * (i / (steps - 1));
+    const testParams = {
+      ...params,
+      [paramName]: params[paramName] * mult
     };
-    const model = calculateModel(params, trajectories);
+    const model = calculateModel(testParams, trajectories);
     results.push({
       multiplier: mult,
       terminalValue: model.summary.terminalValue,
-      totalEBITDA: model.summary.totalEBITDA
+      revenue: model.summary.totalRevenue,
+      ebitda: model.summary.totalEBITDA
     });
   }
   return results;
 }
 
-// Simple Icon components using Lucide
-const Icon = ({
+// Goal Seek function - find growth rate needed for target
+function goalSeek(params, trajectories, targetMetric, targetValue, paramToAdjust, tolerance = 0.01) {
+  let low = 0.1;
+  let high = 3.0;
+  let iterations = 0;
+  const maxIterations = 50;
+  while (iterations < maxIterations && high - low > tolerance) {
+    const mid = (low + high) / 2;
+    const testParams = {
+      ...params,
+      [paramToAdjust]: mid
+    };
+    const model = calculateModel(testParams, trajectories);
+    let currentValue;
+    switch (targetMetric) {
+      case 'terminalValue':
+        currentValue = model.summary.terminalValue;
+        break;
+      case 'revenue':
+        currentValue = model.summary.totalRevenue;
+        break;
+      case 'ebitda':
+        currentValue = model.summary.totalEBITDA;
+        break;
+      case 'students':
+        currentValue = model.summary.totalStudents;
+        break;
+      default:
+        currentValue = model.summary.terminalValue;
+    }
+    if (currentValue < targetValue) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+    iterations++;
+  }
+  return (low + high) / 2;
+}
+
+// Lucide Icon component
+function Icon({
   name,
-  size = 18,
+  size = 24,
   className = ''
-}) => {
+}) {
   const iconRef = useRef(null);
   useEffect(() => {
     if (iconRef.current && window.lucide) {
+      iconRef.current.innerHTML = '';
+      const iconElement = document.createElement('i');
+      iconElement.setAttribute('data-lucide', name);
+      iconRef.current.appendChild(iconElement);
       lucide.createIcons({
-        icons: {
-          [name]: lucide[name]
-        },
-        nameAttr: 'data-lucide'
+        nodes: [iconElement]
       });
     }
   }, [name]);
-  return React.createElement('i', {
+  return /*#__PURE__*/React.createElement("span", {
     ref: iconRef,
-    'data-lucide': name,
-    className,
+    className: `inline-flex items-center justify-center ${className}`,
     style: {
       width: size,
       height: size
     }
   });
-};
+}
 
 // Components
 function MetricCard({
@@ -476,6 +512,560 @@ function TabButton({
     className: `px-4 py-2 font-medium transition-all border-b-2 ${isActive ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`
   }, children);
 }
+
+// Goal Seek Panel Component
+function GoalSeekPanel({
+  params,
+  onApplyResult
+}) {
+  const [targetMetric, setTargetMetric] = useState('terminalValue');
+  const [targetValue, setTargetValue] = useState(5000000000);
+  const [paramToAdjust, setParamToAdjust] = useState('midSizedGrowthMult');
+  const [result, setResult] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const handleCalculate = () => {
+    setIsCalculating(true);
+    setTimeout(() => {
+      const requiredValue = goalSeek(params, BASE_TRAJECTORIES, targetMetric, targetValue, paramToAdjust);
+      setResult(requiredValue);
+      setIsCalculating(false);
+    }, 100);
+  };
+  const metricLabels = {
+    terminalValue: 'Terminal Value',
+    revenue: 'Year 10 Revenue',
+    ebitda: 'Year 10 EBITDA',
+    students: 'Year 10 Students'
+  };
+  const paramLabels = {
+    virtualGrowthMult: 'Virtual Growth Rate',
+    microGrowthMult: 'Micro Growth Rate',
+    midSizedGrowthMult: 'Mid-Sized Growth Rate',
+    ebitdaMultiple: 'EBITDA Multiple'
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-semibold text-gray-900 mb-4 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "target",
+    size: 20
+  }), "Goal Seek / Solver"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-600 mb-4"
+  }, "Find the required growth rate to achieve a specific target outcome."), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-sm font-medium text-gray-700 mb-1"
+  }, "Target Metric"), /*#__PURE__*/React.createElement("select", {
+    value: targetMetric,
+    onChange: e => setTargetMetric(e.target.value),
+    className: "w-full p-2 border rounded-lg bg-white"
+  }, Object.entries(metricLabels).map(([key, label]) => /*#__PURE__*/React.createElement("option", {
+    key: key,
+    value: key
+  }, label)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-sm font-medium text-gray-700 mb-1"
+  }, "Target Value"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: formatCurrency(targetValue, true),
+    onChange: e => {
+      const val = e.target.value.replace(/[^0-9.]/g, '');
+      const multiplier = e.target.value.includes('B') ? 1e9 : e.target.value.includes('M') ? 1e6 : e.target.value.includes('K') ? 1e3 : 1;
+      setTargetValue(parseFloat(val) * multiplier || 0);
+    },
+    className: "w-full p-2 border rounded-lg"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 mt-1"
+  }, [1e9, 3e9, 5e9, 10e9].map(v => /*#__PURE__*/React.createElement("button", {
+    key: v,
+    onClick: () => setTargetValue(v),
+    className: "text-xs px-2 py-1 bg-white border rounded hover:bg-gray-50"
+  }, formatCurrency(v, true))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-sm font-medium text-gray-700 mb-1"
+  }, "Parameter to Adjust"), /*#__PURE__*/React.createElement("select", {
+    value: paramToAdjust,
+    onChange: e => setParamToAdjust(e.target.value),
+    className: "w-full p-2 border rounded-lg bg-white"
+  }, Object.entries(paramLabels).map(([key, label]) => /*#__PURE__*/React.createElement("option", {
+    key: key,
+    value: key
+  }, label))))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: handleCalculate,
+    disabled: isCalculating,
+    className: "px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "calculator",
+    size: 18
+  }), isCalculating ? 'Calculating...' : 'Calculate Required Value'), result !== null && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4 bg-white px-4 py-2 rounded-lg border"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-sm text-gray-600"
+  }, "Required ", paramLabels[paramToAdjust], ":"), /*#__PURE__*/React.createElement("span", {
+    className: "ml-2 font-bold text-indigo-600"
+  }, paramToAdjust.includes('Multiple') ? `${result.toFixed(1)}x` : `${(result * 100).toFixed(0)}%`)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onApplyResult(paramToAdjust, result),
+    className: "px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+  }, "Apply"))));
+}
+
+// Unit Economics Component
+function UnitEconomicsPanel({
+  model
+}) {
+  const [selectedTier, setSelectedTier] = useState('virtual');
+  const tierData = {
+    virtual: {
+      name: 'Virtual Schools',
+      color: COLORS.virtual,
+      tuition: BASE_ASSUMPTIONS.virtual.tuition,
+      costs: [{
+        name: 'Headcount',
+        value: BASE_ASSUMPTIONS.virtual.headcount
+      }, {
+        name: 'Programs',
+        value: BASE_ASSUMPTIONS.virtual.programs
+      }, {
+        name: 'Timeback',
+        value: BASE_ASSUMPTIONS.virtual.timeback
+      }, {
+        name: 'Misc',
+        value: BASE_ASSUMPTIONS.virtual.misc
+      }],
+      students: model.years[10].virtualStudents,
+      revenue: model.years[10].virtualRevenue,
+      ebitda: model.years[10].virtualEBITDA
+    },
+    micro: {
+      name: 'Microschools',
+      color: COLORS.micro,
+      tuition: BASE_ASSUMPTIONS.micro.tuition,
+      costs: [{
+        name: 'Coach Salary',
+        value: BASE_ASSUMPTIONS.micro.coachSalary
+      }, {
+        name: 'Real Estate',
+        value: BASE_ASSUMPTIONS.micro.realEstate
+      }, {
+        name: 'Life Skills',
+        value: BASE_ASSUMPTIONS.micro.lifeSkills
+      }, {
+        name: 'Timeback',
+        value: BASE_ASSUMPTIONS.micro.timeback
+      }, {
+        name: 'Misc',
+        value: BASE_ASSUMPTIONS.micro.misc
+      }],
+      students: model.years[10].microStudents,
+      revenue: model.years[10].microRevenue,
+      ebitda: model.years[10].microEBITDA
+    },
+    midSized: {
+      name: 'Mid-Sized Schools',
+      color: COLORS.midSized,
+      tuition: BASE_ASSUMPTIONS.midSized.tuition,
+      costs: [{
+        name: 'Operating (60%)',
+        value: BASE_ASSUMPTIONS.midSized.tuition * 0.6
+      }],
+      students: model.years[10].midSizedStudents,
+      revenue: model.years[10].midSizedRevenue,
+      ebitda: model.years[10].midSizedEBITDA
+    },
+    flagship: {
+      name: 'Flagship Campuses',
+      color: COLORS.flagship,
+      tuition: BASE_ASSUMPTIONS.flagship.tuition,
+      costs: [{
+        name: 'Operating (55%)',
+        value: BASE_ASSUMPTIONS.flagship.tuition * 0.55
+      }],
+      students: model.years[10].flagshipStudents,
+      revenue: model.years[10].flagshipRevenue,
+      ebitda: model.years[10].flagshipEBITDA
+    }
+  };
+  const tier = tierData[selectedTier];
+  const totalCosts = tier.costs.reduce((sum, c) => sum + c.value, 0);
+  const margin = tier.tuition - totalCosts;
+  const marginPct = (margin / tier.tuition * 100).toFixed(1);
+
+  // CAC/LTV calculation (simplified)
+  const cac = selectedTier === 'virtual' ? BASE_ASSUMPTIONS.virtual.tofMarketing + BASE_ASSUMPTIONS.virtual.bofMarketing : selectedTier === 'micro' ? BASE_ASSUMPTIONS.micro.tofMarketing + BASE_ASSUMPTIONS.micro.bofMarketing : BASE_ASSUMPTIONS.midSized.tofMarketing + BASE_ASSUMPTIONS.midSized.bofMarketing;
+  const avgLife = selectedTier === 'virtual' ? BASE_ASSUMPTIONS.virtual.avgStudentLife : 4;
+  const ltv = margin * avgLife;
+  const ltvCacRatio = (ltv / cac).toFixed(1);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 flex-wrap"
+  }, Object.entries(tierData).map(([key, data]) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => setSelectedTier(key),
+    className: `px-4 py-2 rounded-lg font-medium transition-all ${selectedTier === key ? 'text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`,
+    style: selectedTier === key ? {
+      backgroundColor: data.color
+    } : {}
+  }, data.name))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 lg:grid-cols-2 gap-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border p-6"
+  }, /*#__PURE__*/React.createElement("h4", {
+    className: "font-semibold text-gray-900 mb-4"
+  }, "Per-Student Unit Economics"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center py-2 border-b border-gray-100"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-medium text-gray-900"
+  }, "Tuition Revenue"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-green-600"
+  }, formatCurrency(tier.tuition))), tier.costs.map((cost, idx) => /*#__PURE__*/React.createElement("div", {
+    key: idx,
+    className: "flex justify-between items-center py-2 border-b border-gray-100"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-gray-600"
+  }, "\u2212 ", cost.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-red-600"
+  }, "(", formatCurrency(cost.value), ")"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center py-3 bg-gray-50 rounded-lg px-3 mt-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-gray-900"
+  }, "Contribution Margin"), /*#__PURE__*/React.createElement("div", {
+    className: "text-right"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-lg",
+    style: {
+      color: tier.color
+    }
+  }, formatCurrency(margin)), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm text-gray-500 ml-2"
+  }, "(", marginPct, "%)"))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border p-6"
+  }, /*#__PURE__*/React.createElement("h4", {
+    className: "font-semibold text-gray-900 mb-4"
+  }, "CAC / LTV Analysis"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-4 mb-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-red-50 rounded-lg p-4 text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-red-700 mb-1"
+  }, "Customer Acquisition Cost"), /*#__PURE__*/React.createElement("p", {
+    className: "text-2xl font-bold text-red-900"
+  }, formatCurrency(cac))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-green-50 rounded-lg p-4 text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-green-700 mb-1"
+  }, "Lifetime Value"), /*#__PURE__*/React.createElement("p", {
+    className: "text-2xl font-bold text-green-900"
+  }, formatCurrency(ltv)))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-blue-700 mb-1"
+  }, "LTV:CAC Ratio"), /*#__PURE__*/React.createElement("p", {
+    className: "text-3xl font-bold text-blue-900"
+  }, ltvCacRatio, "x"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-blue-600 mt-1"
+  }, ltvCacRatio >= 3 ? '✓ Healthy (>3x)' : ltvCacRatio >= 2 ? '⚠ Acceptable' : '✗ Needs improvement')), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 text-sm text-gray-500"
+  }, /*#__PURE__*/React.createElement("p", null, "Avg. Student Life: ", avgLife, " years"), /*#__PURE__*/React.createElement("p", null, "Payback Period: ", (cac / margin).toFixed(1), " years")))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border p-6"
+  }, /*#__PURE__*/React.createElement("h4", {
+    className: "font-semibold text-gray-900 mb-4"
+  }, "Year 10 ", tier.name, " Summary"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-600"
+  }, "Students"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xl font-bold"
+  }, formatNumber(tier.students, true))), /*#__PURE__*/React.createElement("div", {
+    className: "text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-600"
+  }, "Revenue"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xl font-bold text-green-600"
+  }, formatCurrency(tier.revenue, true))), /*#__PURE__*/React.createElement("div", {
+    className: "text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-600"
+  }, "EBITDA"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xl font-bold",
+    style: {
+      color: tier.color
+    }
+  }, formatCurrency(tier.ebitda, true))), /*#__PURE__*/React.createElement("div", {
+    className: "text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-600"
+  }, "EBITDA Margin"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xl font-bold"
+  }, tier.revenue > 0 ? (tier.ebitda / tier.revenue * 100).toFixed(1) : 0, "%")))));
+}
+
+// Data Table Component
+function DataTableView({
+  model,
+  viewMode = 'students'
+}) {
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
+  const columns = {
+    students: [{
+      key: 'year',
+      label: 'Year',
+      format: v => v
+    }, {
+      key: 'virtualStudents',
+      label: 'Virtual',
+      format: v => formatNumber(v, true)
+    }, {
+      key: 'microStudents',
+      label: 'Micro',
+      format: v => formatNumber(v, true)
+    }, {
+      key: 'midSizedStudents',
+      label: 'Mid-Sized',
+      format: v => formatNumber(v, true)
+    }, {
+      key: 'flagshipStudents',
+      label: 'Flagship',
+      format: v => formatNumber(v, true)
+    }, {
+      key: 'totalStudents',
+      label: 'Total',
+      format: v => formatNumber(v, true),
+      bold: true
+    }],
+    revenue: [{
+      key: 'year',
+      label: 'Year',
+      format: v => v
+    }, {
+      key: 'virtualRevenue',
+      label: 'Virtual',
+      format: v => formatCurrency(v, true),
+      color: 'text-blue-600'
+    }, {
+      key: 'microRevenue',
+      label: 'Micro',
+      format: v => formatCurrency(v, true),
+      color: 'text-emerald-600'
+    }, {
+      key: 'midSizedRevenue',
+      label: 'Mid-Sized',
+      format: v => formatCurrency(v, true),
+      color: 'text-amber-600'
+    }, {
+      key: 'flagshipRevenue',
+      label: 'Flagship',
+      format: v => formatCurrency(v, true),
+      color: 'text-purple-600'
+    }, {
+      key: 'totalRevenue',
+      label: 'Total',
+      format: v => formatCurrency(v, true),
+      bold: true
+    }],
+    ebitda: [{
+      key: 'year',
+      label: 'Year',
+      format: v => v
+    }, {
+      key: 'virtualEBITDA',
+      label: 'Virtual',
+      format: v => formatCurrency(v, true),
+      color: 'text-blue-600'
+    }, {
+      key: 'microEBITDA',
+      label: 'Micro',
+      format: v => formatCurrency(v, true),
+      color: 'text-emerald-600'
+    }, {
+      key: 'midSizedEBITDA',
+      label: 'Mid-Sized',
+      format: v => formatCurrency(v, true),
+      color: 'text-amber-600'
+    }, {
+      key: 'flagshipEBITDA',
+      label: 'Flagship',
+      format: v => formatCurrency(v, true),
+      color: 'text-purple-600'
+    }, {
+      key: 'totalEBITDA',
+      label: 'Total',
+      format: v => formatCurrency(v, true),
+      bold: true
+    }, {
+      key: 'ebitdaMargin',
+      label: 'Margin',
+      format: v => `${(v * 100).toFixed(1)}%`
+    }],
+    cashflow: [{
+      key: 'year',
+      label: 'Year',
+      format: v => v
+    }, {
+      key: 'totalEBITDA',
+      label: 'EBITDA',
+      format: v => formatCurrency(v, true),
+      color: 'text-green-600'
+    }, {
+      key: 'totalCapex',
+      label: 'CapEx',
+      format: v => formatCurrency(v, true),
+      color: 'text-red-600'
+    }, {
+      key: 'netCashFlow',
+      label: 'Net CF',
+      format: v => formatCurrency(v, true)
+    }, {
+      key: 'cumulativeCashFlow',
+      label: 'Cumulative',
+      format: v => formatCurrency(v, true),
+      bold: true
+    }]
+  };
+  const cols = columns[viewMode];
+  let sortedData = [...model.years];
+  if (sortColumn) {
+    sortedData.sort((a, b) => {
+      const aVal = a[sortColumn];
+      const bVal = b[sortColumn];
+      if (typeof aVal === 'string') {
+        return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+  }
+  const handleSort = key => {
+    if (sortColumn === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(key);
+      setSortDirection('asc');
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-sm"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "border-b bg-gray-50"
+  }, cols.map(col => /*#__PURE__*/React.createElement("th", {
+    key: col.key,
+    onClick: () => handleSort(col.key),
+    className: "text-left py-3 px-4 font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1"
+  }, col.label, sortColumn === col.key && /*#__PURE__*/React.createElement("span", null, sortDirection === 'asc' ? '↑' : '↓')))))), /*#__PURE__*/React.createElement("tbody", null, sortedData.map((row, idx) => /*#__PURE__*/React.createElement("tr", {
+    key: row.year,
+    className: `border-b hover:bg-gray-50 ${idx === 10 ? 'bg-blue-50' : ''}`
+  }, cols.map(col => /*#__PURE__*/React.createElement("td", {
+    key: col.key,
+    className: `py-3 px-4 ${col.bold ? 'font-bold' : ''} ${col.color || ''}`
+  }, col.format(row[col.key]))))))));
+}
+
+// Value Creation Waterfall Component
+function ValueCreationWaterfall({
+  model,
+  params
+}) {
+  const year10 = model.years[10];
+  const waterfallData = [{
+    name: 'Virtual EBITDA',
+    value: year10.virtualEBITDA * params.ebitdaMultiple,
+    fill: COLORS.virtual
+  }, {
+    name: 'Micro EBITDA',
+    value: year10.microEBITDA * params.ebitdaMultiple,
+    fill: COLORS.micro
+  }, {
+    name: 'Mid-Sized EBITDA',
+    value: year10.midSizedEBITDA * params.ebitdaMultiple,
+    fill: COLORS.midSized
+  }, {
+    name: 'Flagship EBITDA',
+    value: year10.flagshipEBITDA * params.ebitdaMultiple,
+    fill: COLORS.flagship
+  }, {
+    name: 'Property Value',
+    value: year10.midSizedSchools * 30000000 + year10.flagshipSchools * 100000000,
+    fill: '#6B7280'
+  }];
+
+  // Calculate running total for waterfall positioning
+  let runningTotal = 0;
+  const processedData = waterfallData.map(item => {
+    const start = runningTotal;
+    runningTotal += item.value;
+    return {
+      ...item,
+      start,
+      end: runningTotal
+    };
+  });
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "font-semibold text-gray-900 mb-4"
+  }, "Value Creation Breakdown"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 lg:grid-cols-2 gap-6"
+  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: 300
+  }, /*#__PURE__*/React.createElement(BarChart, {
+    data: waterfallData,
+    layout: "vertical"
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#E5E7EB"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    type: "number",
+    tickFormatter: v => formatCurrency(v, true),
+    tick: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    type: "category",
+    dataKey: "name",
+    tick: {
+      fontSize: 12
+    },
+    width: 120
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    formatter: v => formatCurrency(v, true)
+  }), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "value",
+    radius: [0, 4, 4, 0]
+  }, waterfallData.map((entry, index) => /*#__PURE__*/React.createElement(Cell, {
+    key: `cell-${index}`,
+    fill: entry.fill
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, waterfallData.map((item, idx) => /*#__PURE__*/React.createElement("div", {
+    key: idx,
+    className: "flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-4 h-4 rounded",
+    style: {
+      backgroundColor: item.fill
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "font-medium"
+  }, item.name)), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, formatCurrency(item.value, true)))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between p-4 bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg border-2 border-blue-300"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-lg"
+  }, "Total Terminal Value"), /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-2xl text-blue-700"
+  }, formatCurrency(model.summary.terminalValue, true))))));
+}
 function TSAScenarioModel() {
   const [activeScenario, setActiveScenario] = useState('base');
   const [activeTab, setActiveTab] = useState('overview');
@@ -483,6 +1073,8 @@ function TSAScenarioModel() {
   const [showAssumptions, setShowAssumptions] = useState(false);
   const [monteCarloResults, setMonteCarloResults] = useState(null);
   const [isRunningMC, setIsRunningMC] = useState(false);
+  const [showDataTable, setShowDataTable] = useState(false);
+  const [dataTableView, setDataTableView] = useState('students');
 
   // Editable parameters
   const [params, setParams] = useState({
@@ -706,7 +1298,7 @@ function TSAScenarioModel() {
   })), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl shadow-sm border mb-6"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex border-b px-4"
+    className: "flex border-b px-4 overflow-x-auto"
   }, /*#__PURE__*/React.createElement(TabButton, {
     isActive: activeTab === 'overview',
     onClick: () => setActiveTab('overview')
@@ -732,6 +1324,22 @@ function TSAScenarioModel() {
     name: "activity",
     size: 16
   }), " Cash Flow")), /*#__PURE__*/React.createElement(TabButton, {
+    isActive: activeTab === 'uniteconomics',
+    onClick: () => setActiveTab('uniteconomics')
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "calculator",
+    size: 16
+  }), " Unit Economics")), /*#__PURE__*/React.createElement(TabButton, {
+    isActive: activeTab === 'goalseek',
+    onClick: () => setActiveTab('goalseek')
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "target",
+    size: 16
+  }), " Goal Seek")), /*#__PURE__*/React.createElement(TabButton, {
     isActive: activeTab === 'sensitivity',
     onClick: () => setActiveTab('sensitivity')
   }, /*#__PURE__*/React.createElement("span", {
@@ -739,7 +1347,15 @@ function TSAScenarioModel() {
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "shuffle",
     size: 16
-  }), " Sensitivity"))), /*#__PURE__*/React.createElement("div", {
+  }), " Sensitivity")), /*#__PURE__*/React.createElement(TabButton, {
+    isActive: activeTab === 'data',
+    onClick: () => setActiveTab('data')
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    name: "table",
+    size: 16
+  }), " Data Tables"))), /*#__PURE__*/React.createElement("div", {
     className: "p-6"
   }, activeTab === 'overview' && /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 lg:grid-cols-2 gap-6"
@@ -995,7 +1611,17 @@ function TSAScenarioModel() {
     className: "font-medium text-green-700 mb-2"
   }, "Breakeven Year"), /*#__PURE__*/React.createElement("p", {
     className: "text-2xl font-bold text-green-900"
-  }, model.summary.breakeven > 0 ? YEARS[model.summary.breakeven] : 'N/A')))), activeTab === 'sensitivity' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  }, model.summary.breakeven > 0 ? YEARS[model.summary.breakeven] : 'N/A')))), activeTab === 'uniteconomics' && /*#__PURE__*/React.createElement(UnitEconomicsPanel, {
+    model: model
+  }), activeTab === 'goalseek' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6"
+  }, /*#__PURE__*/React.createElement(GoalSeekPanel, {
+    params: params,
+    onApplyResult: (param, value) => updateParam(param, value)
+  }), /*#__PURE__*/React.createElement(ValueCreationWaterfall, {
+    model: model,
+    params: params
+  })), activeTab === 'sensitivity' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 lg:grid-cols-2 gap-6"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
     className: "font-semibold text-gray-900 mb-4"
@@ -1110,81 +1736,39 @@ function TSAScenarioModel() {
   }, "P90 (Optimistic)"), /*#__PURE__*/React.createElement("p", {
     className: "text-lg font-bold text-purple-900"
   }, formatCurrency(monteCarloResults.p90.terminalValue, true)))), /*#__PURE__*/React.createElement("div", {
-    className: "mt-4"
-  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: 200
-  }, /*#__PURE__*/React.createElement(BarChart, {
-    data: [{
-      name: 'P10',
-      value: monteCarloResults.p10.terminalValue / 1e9
-    }, {
-      name: 'P25',
-      value: monteCarloResults.p25.terminalValue / 1e9
-    }, {
-      name: 'P50',
-      value: monteCarloResults.p50.terminalValue / 1e9
-    }, {
-      name: 'P75',
-      value: monteCarloResults.p75.terminalValue / 1e9
-    }, {
-      name: 'P90',
-      value: monteCarloResults.p90.terminalValue / 1e9
-    }]
-  }, /*#__PURE__*/React.createElement(CartesianGrid, {
-    strokeDasharray: "3 3",
-    stroke: "#E5E7EB"
-  }), /*#__PURE__*/React.createElement(XAxis, {
-    dataKey: "name",
-    tick: {
-      fontSize: 12
-    }
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    tickFormatter: v => `$${v.toFixed(0)}B`,
-    tick: {
-      fontSize: 12
-    }
-  }), /*#__PURE__*/React.createElement(Tooltip, {
-    formatter: v => `$${v.toFixed(1)}B`
-  }), /*#__PURE__*/React.createElement(Bar, {
-    dataKey: "value",
-    fill: "#8B5CF6",
-    radius: [4, 4, 0, 0]
-  })))))))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-white rounded-xl shadow-sm border p-6"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowAssumptions(!showAssumptions),
-    className: "flex items-center gap-2 font-semibold text-gray-900 w-full"
+    className: "mt-4 p-4 bg-gray-50 rounded-lg"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-600"
+  }, /*#__PURE__*/React.createElement("strong", null, "Expected Value:"), " ", formatCurrency(monteCarloResults.mean.terminalValue, true), " |", /*#__PURE__*/React.createElement("strong", {
+    className: "ml-4"
+  }, "Range:"), " ", formatCurrency(monteCarloResults.p10.terminalValue, true), " to ", formatCurrency(monteCarloResults.p90.terminalValue, true))))), activeTab === 'data' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 mb-6 flex-wrap"
+  }, ['students', 'revenue', 'ebitda', 'cashflow'].map(view => /*#__PURE__*/React.createElement("button", {
+    key: view,
+    onClick: () => setDataTableView(view),
+    className: `px-4 py-2 rounded-lg font-medium transition-all ${dataTableView === view ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`
+  }, view.charAt(0).toUpperCase() + view.slice(1))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      const csv = model.years.map(y => Object.values(y).join(',')).join('\n');
+      const blob = new Blob([csv], {
+        type: 'text/csv'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tsa_model_data.csv';
+      a.click();
+    },
+    className: "ml-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement(Icon, {
-    name: "building-2",
-    size: 20
-  }), "Baked-In Assumptions (Reference)", /*#__PURE__*/React.createElement(Icon, {
-    name: showAssumptions ? 'chevron-up' : 'chevron-down',
-    size: 18,
-    className: "ml-auto"
-  })), showAssumptions && /*#__PURE__*/React.createElement("div", {
-    className: "mt-4 pt-4 border-t"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-4 gap-6 text-sm"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-    className: "font-semibold text-blue-700 mb-2"
-  }, "Virtual Schools"), /*#__PURE__*/React.createElement("ul", {
-    className: "space-y-1 text-gray-600"
-  }, /*#__PURE__*/React.createElement("li", null, "Tuition: $10,474"), /*#__PURE__*/React.createElement("li", null, "Timeback: $2,000 (19.1%)"), /*#__PURE__*/React.createElement("li", null, "Expenses/Student: $6,750"), /*#__PURE__*/React.createElement("li", null, "ToF Marketing: $500"), /*#__PURE__*/React.createElement("li", null, "BoF Marketing: $2,000"), /*#__PURE__*/React.createElement("li", null, "Target: 100K students"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-    className: "font-semibold text-emerald-700 mb-2"
-  }, "Microschools"), /*#__PURE__*/React.createElement("ul", {
-    className: "space-y-1 text-gray-600"
-  }, /*#__PURE__*/React.createElement("li", null, "Tuition: $15,000"), /*#__PURE__*/React.createElement("li", null, "Timeback: $3,000 (20%)"), /*#__PURE__*/React.createElement("li", null, "25 students/school"), /*#__PURE__*/React.createElement("li", null, "Fill Rate Yr1: 70%"), /*#__PURE__*/React.createElement("li", null, "ToF: $500 / BoF: $2,500"), /*#__PURE__*/React.createElement("li", null, "Target: 4,000 schools"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-    className: "font-semibold text-amber-700 mb-2"
-  }, "Mid-Sized (SAC)"), /*#__PURE__*/React.createElement("ul", {
-    className: "space-y-1 text-gray-600"
-  }, /*#__PURE__*/React.createElement("li", null, "Tuition: $25,000"), /*#__PURE__*/React.createElement("li", null, "Timeback: $5,000 (20%)"), /*#__PURE__*/React.createElement("li", null, "Renovated: 400 students, $15M"), /*#__PURE__*/React.createElement("li", null, "Ground-Up: 1000 students, $50M"), /*#__PURE__*/React.createElement("li", null, "50/50 blend"), /*#__PURE__*/React.createElement("li", null, "Fill: 0%\u219233%\u219267%\u2192100%"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-    className: "font-semibold text-purple-700 mb-2"
-  }, "Flagships"), /*#__PURE__*/React.createElement("ul", {
-    className: "space-y-1 text-gray-600"
-  }, /*#__PURE__*/React.createElement("li", null, "Tuition: $50,000"), /*#__PURE__*/React.createElement("li", null, "Timeback: $10,000 (20%)"), /*#__PURE__*/React.createElement("li", null, "1,500 students/campus"), /*#__PURE__*/React.createElement("li", null, "4 total campuses"), /*#__PURE__*/React.createElement("li", null, "Fill: 0%\u21920%\u219233%\u219267%\u2192100%"), /*#__PURE__*/React.createElement("li", null, "CapEx: $75-150M (adjustable)")))))), /*#__PURE__*/React.createElement("div", {
-    className: "mt-4 text-center text-xs text-gray-500"
-  }, "TSA / Strata Financial Model v1.0 \u2022 Based on December 2024 assumptions")));
+    name: "download",
+    size: 18
+  }), "Export CSV")), /*#__PURE__*/React.createElement(DataTableView, {
+    model: model,
+    viewMode: dataTableView
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-sm text-gray-500 mt-8"
+  }, /*#__PURE__*/React.createElement("p", null, "TSA Financial Scenario Model \u2022 Built with React & Recharts"))));
 }
 
 // Render the app
