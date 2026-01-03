@@ -17,10 +17,27 @@
     <script src="vendor/react-is.production.min.js"></script>
 
     <!-- PropTypes (required dependency for Recharts) -->
-    <script src="vendor/prop-types.min.js"></script>
+    <script src="vendor/prop-types.js"></script>
+    <script>
+        // Ensure PropTypes is available globally for Recharts
+        if (typeof PropTypes === 'undefined' && typeof window.PropTypes !== 'undefined') {
+            window.PropTypes = window.PropTypes;
+        }
+        // Debug: Log what's available
+        console.log('React:', typeof React);
+        console.log('ReactDOM:', typeof ReactDOM);
+        console.log('PropTypes:', typeof PropTypes);
+    </script>
 
     <!-- Recharts -->
     <script src="vendor/Recharts.js"></script>
+    <script>
+        // Debug: Check if Recharts loaded
+        console.log('Recharts:', typeof Recharts);
+        if (typeof Recharts === 'undefined') {
+            console.error('Recharts failed to load. Check console for errors above.');
+        }
+    </script>
 
     <!-- Lucide Icons -->
     <script src="vendor/lucide.min.js"></script>
