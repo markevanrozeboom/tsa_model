@@ -11,13 +11,16 @@
     <!-- React and ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
+
+    <!-- React-is (required dependency for Recharts) -->
+    <script crossorigin src="https://unpkg.com/react-is@18/umd/react-is.production.min.js"></script>
+
     <!-- Babel Standalone for JSX transformation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Recharts - Using v2.1.16 for better CDN compatibility -->
-    <script crossorigin src="https://unpkg.com/recharts@2.1.16/dist/Recharts.js"></script>
-    
+
+    <!-- Recharts - Using correct UMD path -->
+    <script crossorigin src="https://unpkg.com/recharts@2.13.3/umd/Recharts.min.js"></script>
+
     <!-- Fallback loader for Recharts if unpkg fails -->
     <script>
         (function() {
@@ -27,7 +30,7 @@
                 if (typeof Recharts === 'undefined') {
                     console.warn('Recharts failed to load from unpkg, trying jsdelivr...');
                     var script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/npm/recharts@2.1.16/dist/Recharts.js';
+                    script.src = 'https://cdn.jsdelivr.net/npm/recharts@2.13.3/umd/Recharts.min.js';
                     script.setAttribute('crossorigin', 'anonymous');
                     script.onerror = function() {
                         console.error('Recharts failed to load from both CDNs');
