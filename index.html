@@ -15,8 +15,21 @@
     <!-- Babel Standalone for JSX transformation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Recharts -->
-    <script crossorigin src="https://cdn.jsdelivr.net/npm/recharts@2.5.0/dist/Recharts.js"></script>
+    <!-- Recharts - Using v2.1.16 for better CDN compatibility -->
+    <script crossorigin src="https://unpkg.com/recharts@2.1.16/dist/Recharts.js"></script>
+    
+    <!-- Fallback loader for Recharts if unpkg fails -->
+    <script>
+        window.addEventListener('load', function() {
+            // Check if Recharts loaded, if not, try jsdelivr as fallback
+            if (typeof Recharts === 'undefined') {
+                var script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/recharts@2.1.16/dist/Recharts.js';
+                script.crossOrigin = 'anonymous';
+                document.head.appendChild(script);
+            }
+        });
+    </script>
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
