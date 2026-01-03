@@ -32,7 +32,43 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
+            <div style="text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 16px;">Loading TSA Financial Model...</div>
+                <div style="font-size: 14px; color: #666;">Please wait while we load the application</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error detection script -->
+    <script>
+        // Detect if critical libraries failed to load
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof Recharts === 'undefined') {
+                    document.getElementById('root').innerHTML = `
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
+                            <div style="text-align: center; max-width: 600px; padding: 20px;">
+                                <div style="font-size: 24px; margin-bottom: 16px; color: #dc2626;">Error Loading Application</div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 12px;">
+                                    Required libraries failed to load. This might be due to:
+                                </div>
+                                <ul style="text-align: left; font-size: 14px; color: #666;">
+                                    <li>Network connectivity issues</li>
+                                    <li>CDN resources being blocked</li>
+                                    <li>Ad blocker or privacy extension interference</li>
+                                </ul>
+                                <div style="font-size: 14px; color: #666; margin-top: 12px;">
+                                    Please try refreshing the page or checking your network connection.
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }, 2000);
+        });
+    </script>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useRef } = React;
