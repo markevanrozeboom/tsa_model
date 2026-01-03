@@ -2,12 +2,6 @@
 
 An interactive static webpage for dynamically modeling financial scenarios for TSA (The Strata Academy). This tool allows you to isolate different components of the business and adjust various inputs to see real-time impacts on financial projections over a 10-year period.
 
-## 🌐 Live Demo
-
-**Access the live application**: [https://markevanrozeboom.github.io/tsa_model/](https://markevanrozeboom.github.io/tsa_model/)
-
-The application is hosted on GitHub Pages and is fully functional directly in your browser - no installation required!
-
 ## Features
 
 ### 🎯 Scenario Analysis
@@ -35,10 +29,7 @@ The application is hosted on GitHub Pages and is fully functional directly in yo
 
 ## How to Use
 
-### Quick Start - Option 1: Use the Live Site
-Visit [https://markevanrozeboom.github.io/tsa_model/](https://markevanrozeboom.github.io/tsa_model/) in any modern web browser to start using the model immediately.
-
-### Quick Start - Option 2: Run Locally
+### Quick Start
 1. Simply open `index.html` in any modern web browser (Chrome, Firefox, Safari, Edge)
 2. No installation, no build process, no dependencies to install
 3. The page works entirely offline after the first load (CDN resources are cached)
