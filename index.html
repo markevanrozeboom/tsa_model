@@ -44,29 +44,43 @@
     <!-- Error detection script -->
     <script>
         // Detect if critical libraries failed to load
+        var LOAD_CHECK_DELAY_MS = 2000;
+        
         window.addEventListener('load', function() {
             setTimeout(function() {
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof Recharts === 'undefined') {
+                var missingLibraries = [];
+                
+                if (typeof React === 'undefined') missingLibraries.push('React');
+                if (typeof ReactDOM === 'undefined') missingLibraries.push('ReactDOM');
+                if (typeof Recharts === 'undefined') missingLibraries.push('Recharts');
+                if (typeof Babel === 'undefined') missingLibraries.push('Babel');
+                if (typeof lucide === 'undefined') missingLibraries.push('Lucide Icons');
+                
+                if (missingLibraries.length > 0) {
                     document.getElementById('root').innerHTML = `
                         <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
                             <div style="text-align: center; max-width: 600px; padding: 20px;">
                                 <div style="font-size: 24px; margin-bottom: 16px; color: #dc2626;">Error Loading Application</div>
                                 <div style="font-size: 14px; color: #666; margin-bottom: 12px;">
-                                    Required libraries failed to load. This might be due to:
+                                    Required libraries failed to load: ${missingLibraries.join(', ')}
+                                </div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 12px;">
+                                    This might be due to:
                                 </div>
                                 <ul style="text-align: left; font-size: 14px; color: #666;">
                                     <li>Network connectivity issues</li>
                                     <li>CDN resources being blocked</li>
                                     <li>Ad blocker or privacy extension interference</li>
+                                    <li>Corporate firewall blocking external resources</li>
                                 </ul>
                                 <div style="font-size: 14px; color: #666; margin-top: 12px;">
-                                    Please try refreshing the page or checking your network connection.
+                                    Please try refreshing the page, disabling browser extensions, or checking your network connection.
                                 </div>
                             </div>
                         </div>
                     `;
                 }
-            }, 2000);
+            }, LOAD_CHECK_DELAY_MS);
         });
     </script>
 
