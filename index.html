@@ -32,7 +32,57 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
+            <div style="text-align: center;">
+                <div style="font-size: 24px; margin-bottom: 16px;">Loading TSA Financial Model...</div>
+                <div style="font-size: 14px; color: #666;">Please wait while we load the application</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error detection script -->
+    <script>
+        // Detect if critical libraries failed to load
+        var LOAD_CHECK_DELAY_MS = 2000;
+        
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                var missingLibraries = [];
+                
+                if (typeof React === 'undefined') missingLibraries.push('React');
+                if (typeof ReactDOM === 'undefined') missingLibraries.push('ReactDOM');
+                if (typeof Recharts === 'undefined') missingLibraries.push('Recharts');
+                if (typeof Babel === 'undefined') missingLibraries.push('Babel');
+                if (typeof lucide === 'undefined') missingLibraries.push('Lucide Icons');
+                
+                if (missingLibraries.length > 0) {
+                    document.getElementById('root').innerHTML = `
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">
+                            <div style="text-align: center; max-width: 600px; padding: 20px;">
+                                <div style="font-size: 24px; margin-bottom: 16px; color: #dc2626;">Error Loading Application</div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 12px;">
+                                    Required libraries failed to load: ${missingLibraries.join(', ')}
+                                </div>
+                                <div style="font-size: 14px; color: #666; margin-bottom: 12px;">
+                                    This might be due to:
+                                </div>
+                                <ul style="text-align: left; font-size: 14px; color: #666;">
+                                    <li>Network connectivity issues</li>
+                                    <li>CDN resources being blocked</li>
+                                    <li>Ad blocker or privacy extension interference</li>
+                                    <li>Corporate firewall blocking external resources</li>
+                                </ul>
+                                <div style="font-size: 14px; color: #666; margin-top: 12px;">
+                                    Please try refreshing the page, disabling browser extensions, or checking your network connection.
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }, LOAD_CHECK_DELAY_MS);
+        });
+    </script>
 
     <script type="text/babel">
         const { useState, useMemo, useEffect, useRef } = React;
