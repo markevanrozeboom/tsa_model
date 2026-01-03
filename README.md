@@ -184,5 +184,5 @@ This model is provided as-is for financial planning and analysis purposes.
 ---
 
 **Version**: 1.0  
-**Last Updated**: January 2026  
+**Last Updated**: January 2024  
 **Based on**: TSA Financial Model (December 2024 assumptions)
