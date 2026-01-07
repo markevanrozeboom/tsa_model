@@ -696,6 +696,12 @@
         function UnitEconomicsPanel({ model }) {
           const [selectedTier, setSelectedTier] = useState('virtual');
 
+          // Calculate amortized marketing (CAC spread over average student life)
+          const getAmortizedMarketing = (tier) => {
+            const cac = BASE_ASSUMPTIONS[tier].tofMarketing + BASE_ASSUMPTIONS[tier].bofMarketing;
+            return cac / BASE_ASSUMPTIONS[tier].avgStudentLife;
+          };
+
           const tierData = {
             virtual: {
               name: 'Virtual Schools',
@@ -706,6 +712,7 @@
                 { name: 'Programs', value: BASE_ASSUMPTIONS.virtual.programs },
                 { name: 'Timeback', value: BASE_ASSUMPTIONS.virtual.timeback },
                 { name: 'Misc', value: BASE_ASSUMPTIONS.virtual.misc },
+                { name: 'Marketing (amortized)', value: getAmortizedMarketing('virtual'), isMarketing: true },
               ],
               students: model.years[10].virtualStudents,
               revenue: model.years[10].virtualRevenue,
@@ -721,6 +728,7 @@
                 { name: 'Life Skills', value: BASE_ASSUMPTIONS.micro.lifeSkills },
                 { name: 'Timeback', value: BASE_ASSUMPTIONS.micro.timeback },
                 { name: 'Misc', value: BASE_ASSUMPTIONS.micro.misc },
+                { name: 'Marketing (amortized)', value: getAmortizedMarketing('micro'), isMarketing: true },
               ],
               students: model.years[10].microStudents,
               revenue: model.years[10].microRevenue,
@@ -735,6 +743,7 @@
                 { name: 'Programs', value: BASE_ASSUMPTIONS.midSized.programs },
                 { name: 'Misc', value: BASE_ASSUMPTIONS.midSized.misc },
                 { name: 'Timeback', value: BASE_ASSUMPTIONS.midSized.timeback },
+                { name: 'Marketing (amortized)', value: getAmortizedMarketing('midSized'), isMarketing: true },
               ],
               students: model.years[10].midSizedStudents,
               revenue: model.years[10].midSizedRevenue,
@@ -749,6 +758,7 @@
                 { name: 'Programs', value: BASE_ASSUMPTIONS.flagship.programs },
                 { name: 'Misc', value: BASE_ASSUMPTIONS.flagship.misc },
                 { name: 'Timeback', value: BASE_ASSUMPTIONS.flagship.timeback },
+                { name: 'Marketing (amortized)', value: getAmortizedMarketing('flagship'), isMarketing: true },
               ],
               students: model.years[10].flagshipStudents,
               revenue: model.years[10].flagshipRevenue,
@@ -799,9 +809,12 @@
                     </div>
 
                     {tier.costs.map((cost, idx) => (
-                      <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600">− {cost.name}</span>
-                        <span className="text-red-600">({formatCurrency(cost.value)})</span>
+                      <div key={idx} className={`flex justify-between items-center py-2 border-b border-gray-100 ${cost.isMarketing ? 'bg-orange-50 -mx-2 px-2 rounded' : ''}`}>
+                        <span className={cost.isMarketing ? 'text-orange-700' : 'text-gray-600'}>
+                          − {cost.name}
+                          {cost.isMarketing && <span className="text-xs ml-1">(CAC ÷ {avgLife} yrs)</span>}
+                        </span>
+                        <span className={cost.isMarketing ? 'text-orange-600' : 'text-red-600'}>({formatCurrency(cost.value)})</span>
                       </div>
                     ))}
 
@@ -814,6 +827,9 @@
                         <span className="text-sm text-gray-500 ml-2">({marginPct}%)</span>
                       </div>
                     </div>
+                    <p className="text-xs text-gray-500 mt-2 italic">
+                      * Marketing is paid upfront but amortized over the {avgLife}-year average student life
+                    </p>
                   </div>
                 </div>
 

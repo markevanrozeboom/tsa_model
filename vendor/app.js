@@ -670,6 +670,12 @@ function UnitEconomicsPanel({
   model
 }) {
   const [selectedTier, setSelectedTier] = useState('virtual');
+
+  // Calculate amortized marketing (CAC spread over average student life)
+  const getAmortizedMarketing = tier => {
+    const cac = BASE_ASSUMPTIONS[tier].tofMarketing + BASE_ASSUMPTIONS[tier].bofMarketing;
+    return cac / BASE_ASSUMPTIONS[tier].avgStudentLife;
+  };
   const tierData = {
     virtual: {
       name: 'Virtual Schools',
@@ -687,6 +693,10 @@ function UnitEconomicsPanel({
       }, {
         name: 'Misc',
         value: BASE_ASSUMPTIONS.virtual.misc
+      }, {
+        name: 'Marketing (amortized)',
+        value: getAmortizedMarketing('virtual'),
+        isMarketing: true
       }],
       students: model.years[10].virtualStudents,
       revenue: model.years[10].virtualRevenue,
@@ -711,6 +721,10 @@ function UnitEconomicsPanel({
       }, {
         name: 'Misc',
         value: BASE_ASSUMPTIONS.micro.misc
+      }, {
+        name: 'Marketing (amortized)',
+        value: getAmortizedMarketing('micro'),
+        isMarketing: true
       }],
       students: model.years[10].microStudents,
       revenue: model.years[10].microRevenue,
@@ -732,6 +746,10 @@ function UnitEconomicsPanel({
       }, {
         name: 'Timeback',
         value: BASE_ASSUMPTIONS.midSized.timeback
+      }, {
+        name: 'Marketing (amortized)',
+        value: getAmortizedMarketing('midSized'),
+        isMarketing: true
       }],
       students: model.years[10].midSizedStudents,
       revenue: model.years[10].midSizedRevenue,
@@ -753,6 +771,10 @@ function UnitEconomicsPanel({
       }, {
         name: 'Timeback',
         value: BASE_ASSUMPTIONS.flagship.timeback
+      }, {
+        name: 'Marketing (amortized)',
+        value: getAmortizedMarketing('flagship'),
+        isMarketing: true
       }],
       students: model.years[10].flagshipStudents,
       revenue: model.years[10].flagshipRevenue,
@@ -796,11 +818,13 @@ function UnitEconomicsPanel({
     className: "font-bold text-green-600"
   }, formatCurrency(tier.tuition))), tier.costs.map((cost, idx) => /*#__PURE__*/React.createElement("div", {
     key: idx,
-    className: "flex justify-between items-center py-2 border-b border-gray-100"
+    className: `flex justify-between items-center py-2 border-b border-gray-100 ${cost.isMarketing ? 'bg-orange-50 -mx-2 px-2 rounded' : ''}`
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-gray-600"
-  }, "\u2212 ", cost.name), /*#__PURE__*/React.createElement("span", {
-    className: "text-red-600"
+    className: cost.isMarketing ? 'text-orange-700' : 'text-gray-600'
+  }, "\u2212 ", cost.name, cost.isMarketing && /*#__PURE__*/React.createElement("span", {
+    className: "text-xs ml-1"
+  }, "(CAC \xF7 ", avgLife, " yrs)")), /*#__PURE__*/React.createElement("span", {
+    className: cost.isMarketing ? 'text-orange-600' : 'text-red-600'
   }, "(", formatCurrency(cost.value), ")"))), /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center py-3 bg-gray-50 rounded-lg px-3 mt-2"
   }, /*#__PURE__*/React.createElement("span", {
@@ -814,7 +838,9 @@ function UnitEconomicsPanel({
     }
   }, formatCurrency(margin)), /*#__PURE__*/React.createElement("span", {
     className: "text-sm text-gray-500 ml-2"
-  }, "(", marginPct, "%)"))))), /*#__PURE__*/React.createElement("div", {
+  }, "(", marginPct, "%)"))), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mt-2 italic"
+  }, "* Marketing is paid upfront but amortized over the ", avgLife, "-year average student life"))), /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl border p-6"
   }, /*#__PURE__*/React.createElement("h4", {
     className: "font-semibold text-gray-900 mb-4"
