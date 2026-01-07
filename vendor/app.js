@@ -48,7 +48,9 @@ const BASE_ASSUMPTIONS = {
     tofMarketing: 500,
     bofMarketing: 2500,
     fillRateYr1: 0.70,
-    fillRateYr2: 1.0
+    fillRateYr2: 1.0,
+    avgStudentLife: 2.5,
+    organicChurn: 0.075
   },
   midSized: {
     tuition: 25000,
@@ -57,7 +59,6 @@ const BASE_ASSUMPTIONS = {
     programs: 2500,
     misc: 1250,
     otherFacilities: 3000,
-    // NEW: Other facilities expense
     studentsRenovated: 400,
     studentsNewBuild: 1000,
     purchaseRenovated: 1000000,
@@ -67,7 +68,9 @@ const BASE_ASSUMPTIONS = {
     blendRatio: 0.5,
     tofMarketing: 1000,
     bofMarketing: 4000,
-    fillRates: [0, 0.33, 0.67, 1.0]
+    fillRates: [0, 0.33, 0.67, 1.0],
+    avgStudentLife: 4.5,
+    organicChurn: 0.075
   },
   flagship: {
     tuition: 50000,
@@ -76,11 +79,12 @@ const BASE_ASSUMPTIONS = {
     programs: 2500,
     misc: 1250,
     otherFacilities: 5000,
-    // NEW: Other facilities expense
     studentsPerSchool: 1500,
     tofMarketing: 2000,
     bofMarketing: 8000,
-    fillRates: [0, 0, 0.33, 0.67, 1.0]
+    fillRates: [0, 0, 0.33, 0.67, 1.0],
+    avgStudentLife: 6.5,
+    organicChurn: 0.075
   }
 };
 
@@ -166,6 +170,12 @@ function calculateModel(params, trajectories) {
   let prevMidSizedSchools = 0;
   let prevFlagshipSchools = 0;
 
+  // Track previous year students for marketing calculation
+  // Seed with initial students (matching Excel pilot phase)
+  let prevMicroStudents = 150; // 6 existing schools * 25 students
+  let prevMidSizedStudents = 40;
+  let prevFlagshipStudents = 0;
+
   // Track school ages for fill rate calculation
   let midSizedSchoolAges = [];
   let flagshipSchoolAges = [];
@@ -188,10 +198,12 @@ function calculateModel(params, trajectories) {
     const microRevenue = microStudents * BASE_ASSUMPTIONS.micro.tuition;
     const microExpenses = microStudents * (BASE_ASSUMPTIONS.micro.coachSalary + BASE_ASSUMPTIONS.micro.realEstate + BASE_ASSUMPTIONS.micro.lifeSkills + BASE_ASSUMPTIONS.micro.misc + BASE_ASSUMPTIONS.micro.timeback) * params.costInflation;
     const microTimeback = microStudents * BASE_ASSUMPTIONS.micro.timeback;
-    const microNewStudents = Math.round(newMicroSchools * BASE_ASSUMPTIONS.micro.fillRateYr1 * BASE_ASSUMPTIONS.micro.studentsPerSchool);
+    // Calculate new students for marketing (growth + organic churn replacement)
+    const microNewStudents = Math.max(0, Math.round(microStudents - prevMicroStudents * (1 - BASE_ASSUMPTIONS.micro.organicChurn)));
     const microMarketing = microNewStudents * (BASE_ASSUMPTIONS.micro.tofMarketing + BASE_ASSUMPTIONS.micro.bofMarketing);
     const microEBITDA = microRevenue - microExpenses - microMarketing;
     prevMicroSchools = microSchools;
+    prevMicroStudents = microStudents;
 
     // Mid-Sized Schools
     const midSizedSchools = Math.round(trajectories.midSizedSchools[i] * params.midSizedGrowthMult);
@@ -212,14 +224,19 @@ function calculateModel(params, trajectories) {
     });
     const midSizedRevenue = midSizedStudents * BASE_ASSUMPTIONS.midSized.tuition;
     const midSizedTimeback = midSizedStudents * BASE_ASSUMPTIONS.midSized.timeback;
-    // Expenses: headcount + programs + misc + timeback + otherFacilities = $17,523/student
+    // Operating Expenses: headcount + programs + misc + timeback + otherFacilities
     const midSizedExpenses = midSizedStudents * (BASE_ASSUMPTIONS.midSized.headcount + BASE_ASSUMPTIONS.midSized.programs + BASE_ASSUMPTIONS.midSized.misc + BASE_ASSUMPTIONS.midSized.timeback + BASE_ASSUMPTIONS.midSized.otherFacilities) * params.costInflation;
-    const midSizedEBITDA = midSizedRevenue - midSizedExpenses;
+
+    // Calculate new students for marketing (growth + organic churn replacement)
+    const midSizedNewStudents = Math.max(0, Math.round(midSizedStudents - prevMidSizedStudents * (1 - BASE_ASSUMPTIONS.midSized.organicChurn)));
+    const midSizedMarketing = midSizedNewStudents * (BASE_ASSUMPTIONS.midSized.tofMarketing + BASE_ASSUMPTIONS.midSized.bofMarketing);
+    const midSizedEBITDA = midSizedRevenue - midSizedExpenses - midSizedMarketing;
 
     // Mid-sized CapEx
     const midSizedCapexPerSchool = (BASE_ASSUMPTIONS.midSized.purchaseRenovated + BASE_ASSUMPTIONS.midSized.capexRenovated) * BASE_ASSUMPTIONS.midSized.blendRatio + (BASE_ASSUMPTIONS.midSized.purchaseNewBuild + BASE_ASSUMPTIONS.midSized.capexNewBuild) * (1 - BASE_ASSUMPTIONS.midSized.blendRatio);
     const midSizedCapex = newMidSized * midSizedCapexPerSchool;
     prevMidSizedSchools = midSizedSchools;
+    prevMidSizedStudents = midSizedStudents;
 
     // Flagship Schools
     const flagshipSchools = trajectories.flagshipSchools[i];
@@ -237,11 +254,16 @@ function calculateModel(params, trajectories) {
     });
     const flagshipRevenue = flagshipStudents * BASE_ASSUMPTIONS.flagship.tuition;
     const flagshipTimeback = flagshipStudents * BASE_ASSUMPTIONS.flagship.timeback;
-    // Expenses: headcount + programs + misc + timeback + otherFacilities = $23,994/student
+    // Operating Expenses: headcount + programs + misc + timeback + otherFacilities
     const flagshipExpenses = flagshipStudents * (BASE_ASSUMPTIONS.flagship.headcount + BASE_ASSUMPTIONS.flagship.programs + BASE_ASSUMPTIONS.flagship.misc + BASE_ASSUMPTIONS.flagship.timeback + BASE_ASSUMPTIONS.flagship.otherFacilities) * params.costInflation;
-    const flagshipEBITDA = flagshipRevenue - flagshipExpenses;
+
+    // Calculate new students for marketing (growth + organic churn replacement)
+    const flagshipNewStudents = Math.max(0, Math.round(flagshipStudents - prevFlagshipStudents * (1 - BASE_ASSUMPTIONS.flagship.organicChurn)));
+    const flagshipMarketing = flagshipNewStudents * (BASE_ASSUMPTIONS.flagship.tofMarketing + BASE_ASSUMPTIONS.flagship.bofMarketing);
+    const flagshipEBITDA = flagshipRevenue - flagshipExpenses - flagshipMarketing;
     const flagshipCapex = newFlagship * params.flagshipCapex;
     prevFlagshipSchools = flagshipSchools;
+    prevFlagshipStudents = flagshipStudents;
 
     // Totals
     const totalStudents = virtualStudents + microStudents + midSizedStudents + flagshipStudents;
@@ -727,9 +749,9 @@ function UnitEconomicsPanel({
   const margin = tier.tuition - totalCosts;
   const marginPct = (margin / tier.tuition * 100).toFixed(1);
 
-  // CAC/LTV calculation (simplified)
-  const cac = selectedTier === 'virtual' ? BASE_ASSUMPTIONS.virtual.tofMarketing + BASE_ASSUMPTIONS.virtual.bofMarketing : selectedTier === 'micro' ? BASE_ASSUMPTIONS.micro.tofMarketing + BASE_ASSUMPTIONS.micro.bofMarketing : BASE_ASSUMPTIONS.midSized.tofMarketing + BASE_ASSUMPTIONS.midSized.bofMarketing;
-  const avgLife = selectedTier === 'virtual' ? BASE_ASSUMPTIONS.virtual.avgStudentLife : 4;
+  // CAC/LTV calculation
+  const cac = BASE_ASSUMPTIONS[selectedTier].tofMarketing + BASE_ASSUMPTIONS[selectedTier].bofMarketing;
+  const avgLife = BASE_ASSUMPTIONS[selectedTier].avgStudentLife;
   const ltv = margin * avgLife;
   const ltvCacRatio = (ltv / cac).toFixed(1);
   return /*#__PURE__*/React.createElement("div", {
