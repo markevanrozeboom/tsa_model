@@ -57,7 +57,7 @@
           flagship: {
             tuition: 50000,
             timeback: 10000,
-            headcount: 5232.5,  // P&L operational expense
+            headcount: 5244,    // P&L operational expense (1500-student model)
             programs: 3000,     // P&L operational expense
             misc: 1500,         // P&L operational expense
             studentsPerSchool: 1500,
@@ -174,7 +174,13 @@
               BASE_ASSUMPTIONS.virtual.timeback
             ) * params.costInflation;
             const virtualTimeback = virtualStudents * BASE_ASSUMPTIONS.virtual.timeback;
-            const virtualEBITDA = virtualRevenue - virtualExpenses;
+            // Calculate new students for marketing (growth + organic churn + rollover churn replacement)
+            const virtualChurnRate = BASE_ASSUMPTIONS.virtual.organicChurn + (1 / BASE_ASSUMPTIONS.virtual.avgStudentLife);
+            const virtualNewStudents = i === 0
+              ? virtualStudents  // First year: all students are new
+              : Math.max(0, Math.round(virtualStudents - (trajectories.virtual[i-1] * params.virtualGrowthMult) * (1 - virtualChurnRate)));
+            const virtualMarketing = virtualNewStudents * (BASE_ASSUMPTIONS.virtual.tofMarketing + BASE_ASSUMPTIONS.virtual.bofMarketing);
+            const virtualEBITDA = virtualRevenue - virtualExpenses - virtualMarketing;
 
             // Microschools
             const microSchools = Math.round(trajectories.microSchools[i] * params.microGrowthMult);
