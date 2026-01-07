@@ -34,6 +34,10 @@
           midSized: {
             tuition: 25000,
             timeback: 5000,
+            headcount: 5773,
+            programs: 2500,
+            misc: 1250,
+            otherFacilities: 3000,  // NEW: Other facilities expense
             studentsRenovated: 400,
             studentsNewBuild: 1000,
             purchaseRenovated: 1000000,
@@ -48,6 +52,10 @@
           flagship: {
             tuition: 50000,
             timeback: 10000,
+            headcount: 5244,
+            programs: 2500,
+            misc: 1250,
+            otherFacilities: 5000,  // NEW: Other facilities expense
             studentsPerSchool: 1500,
             tofMarketing: 2000,
             bofMarketing: 8000,
@@ -199,7 +207,14 @@
 
             const midSizedRevenue = midSizedStudents * BASE_ASSUMPTIONS.midSized.tuition;
             const midSizedTimeback = midSizedStudents * BASE_ASSUMPTIONS.midSized.timeback;
-            const midSizedExpenses = midSizedStudents * (BASE_ASSUMPTIONS.midSized.tuition * 0.6) * params.costInflation;
+            // Expenses: headcount + programs + misc + timeback + otherFacilities = $17,523/student
+            const midSizedExpenses = midSizedStudents * (
+              BASE_ASSUMPTIONS.midSized.headcount +
+              BASE_ASSUMPTIONS.midSized.programs +
+              BASE_ASSUMPTIONS.midSized.misc +
+              BASE_ASSUMPTIONS.midSized.timeback +
+              BASE_ASSUMPTIONS.midSized.otherFacilities
+            ) * params.costInflation;
             const midSizedEBITDA = midSizedRevenue - midSizedExpenses;
 
             // Mid-sized CapEx
@@ -227,7 +242,14 @@
 
             const flagshipRevenue = flagshipStudents * BASE_ASSUMPTIONS.flagship.tuition;
             const flagshipTimeback = flagshipStudents * BASE_ASSUMPTIONS.flagship.timeback;
-            const flagshipExpenses = flagshipStudents * (BASE_ASSUMPTIONS.flagship.tuition * 0.55) * params.costInflation;
+            // Expenses: headcount + programs + misc + timeback + otherFacilities = $23,994/student
+            const flagshipExpenses = flagshipStudents * (
+              BASE_ASSUMPTIONS.flagship.headcount +
+              BASE_ASSUMPTIONS.flagship.programs +
+              BASE_ASSUMPTIONS.flagship.misc +
+              BASE_ASSUMPTIONS.flagship.timeback +
+              BASE_ASSUMPTIONS.flagship.otherFacilities
+            ) * params.costInflation;
             const flagshipEBITDA = flagshipRevenue - flagshipExpenses;
             const flagshipCapex = newFlagship * params.flagshipCapex;
             prevFlagshipSchools = flagshipSchools;
@@ -669,7 +691,11 @@
               color: COLORS.midSized,
               tuition: BASE_ASSUMPTIONS.midSized.tuition,
               costs: [
-                { name: 'Operating (60%)', value: BASE_ASSUMPTIONS.midSized.tuition * 0.6 },
+                { name: 'Headcount', value: BASE_ASSUMPTIONS.midSized.headcount },
+                { name: 'Programs', value: BASE_ASSUMPTIONS.midSized.programs },
+                { name: 'Misc', value: BASE_ASSUMPTIONS.midSized.misc },
+                { name: 'Timeback', value: BASE_ASSUMPTIONS.midSized.timeback },
+                { name: 'Other Facilities', value: BASE_ASSUMPTIONS.midSized.otherFacilities },
               ],
               students: model.years[10].midSizedStudents,
               revenue: model.years[10].midSizedRevenue,
@@ -680,7 +706,11 @@
               color: COLORS.flagship,
               tuition: BASE_ASSUMPTIONS.flagship.tuition,
               costs: [
-                { name: 'Operating (55%)', value: BASE_ASSUMPTIONS.flagship.tuition * 0.55 },
+                { name: 'Headcount', value: BASE_ASSUMPTIONS.flagship.headcount },
+                { name: 'Programs', value: BASE_ASSUMPTIONS.flagship.programs },
+                { name: 'Misc', value: BASE_ASSUMPTIONS.flagship.misc },
+                { name: 'Timeback', value: BASE_ASSUMPTIONS.flagship.timeback },
+                { name: 'Other Facilities', value: BASE_ASSUMPTIONS.flagship.otherFacilities },
               ],
               students: model.years[10].flagshipStudents,
               revenue: model.years[10].flagshipRevenue,
