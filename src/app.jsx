@@ -174,11 +174,14 @@
               BASE_ASSUMPTIONS.virtual.timeback
             ) * params.costInflation;
             const virtualTimeback = virtualStudents * BASE_ASSUMPTIONS.virtual.timeback;
-            // Calculate new students for marketing (growth + organic churn + rollover churn replacement)
-            const virtualChurnRate = BASE_ASSUMPTIONS.virtual.organicChurn + (1 / BASE_ASSUMPTIONS.virtual.avgStudentLife);
+            // Calculate new students for marketing
+            // Year 1: only organic churn (no prior cohort to roll over)
+            // Year 2+: organic churn + rollover churn
+            const virtualOrganicChurn = BASE_ASSUMPTIONS.virtual.organicChurn;
+            const virtualRolloverChurn = 1 / BASE_ASSUMPTIONS.virtual.avgStudentLife;
             const virtualNewStudents = i === 0
               ? virtualStudents  // First year: all students are new
-              : Math.max(0, Math.round(virtualStudents - (trajectories.virtual[i-1] * params.virtualGrowthMult) * (1 - virtualChurnRate)));
+              : Math.max(0, Math.round(virtualStudents - (trajectories.virtual[i-1] * params.virtualGrowthMult) * (1 - virtualOrganicChurn - virtualRolloverChurn)));
             const virtualMarketing = virtualNewStudents * (BASE_ASSUMPTIONS.virtual.tofMarketing + BASE_ASSUMPTIONS.virtual.bofMarketing);
             const virtualEBITDA = virtualRevenue - virtualExpenses - virtualMarketing;
 
@@ -199,10 +202,12 @@
               BASE_ASSUMPTIONS.micro.timeback
             ) * params.costInflation;
             const microTimeback = microStudents * BASE_ASSUMPTIONS.micro.timeback;
-            // Calculate new students for marketing (growth + organic churn + rollover churn replacement)
-            // Rollover churn = students aging out after avgStudentLife
-            const microChurnRate = BASE_ASSUMPTIONS.micro.organicChurn + (1 / BASE_ASSUMPTIONS.micro.avgStudentLife);
-            const microNewStudents = Math.max(0, Math.round(microStudents - prevMicroStudents * (1 - microChurnRate)));
+            // Calculate new students for marketing
+            // Year 1: only organic churn (no prior cohort to roll over)
+            // Year 2+: organic churn + rollover churn
+            const microOrganicRetained = Math.round(prevMicroStudents * (1 - BASE_ASSUMPTIONS.micro.organicChurn));
+            const microRolloverLoss = i === 0 ? 0 : Math.round(prevMicroStudents / BASE_ASSUMPTIONS.micro.avgStudentLife);
+            const microNewStudents = Math.max(0, microStudents - microOrganicRetained + microRolloverLoss);
             const microMarketing = microNewStudents * (BASE_ASSUMPTIONS.micro.tofMarketing + BASE_ASSUMPTIONS.micro.bofMarketing);
             const microEBITDA = microRevenue - microExpenses - microMarketing;
             prevMicroSchools = microSchools;
@@ -227,6 +232,10 @@
               const fillRate = BASE_ASSUMPTIONS.midSized.fillRates[Math.min(age, 3)];
               midSizedStudents += Math.round(studentsPerMidSized * fillRate);
             });
+            // In Year 1, maintain pilot students when schools haven't ramped up yet
+            if (i === 0 && midSizedStudents < prevMidSizedStudents) {
+              midSizedStudents = prevMidSizedStudents;
+            }
 
             const midSizedRevenue = midSizedStudents * BASE_ASSUMPTIONS.midSized.tuition;
             const midSizedTimeback = midSizedStudents * BASE_ASSUMPTIONS.midSized.timeback;
@@ -238,9 +247,12 @@
               BASE_ASSUMPTIONS.midSized.timeback
             ) * params.costInflation;
 
-            // Calculate new students for marketing (growth + organic churn + rollover churn replacement)
-            const midSizedChurnRate = BASE_ASSUMPTIONS.midSized.organicChurn + (1 / BASE_ASSUMPTIONS.midSized.avgStudentLife);
-            const midSizedNewStudents = Math.max(0, Math.round(midSizedStudents - prevMidSizedStudents * (1 - midSizedChurnRate)));
+            // Calculate new students for marketing
+            // Year 1: only organic churn (no prior cohort to roll over)
+            // Year 2+: organic churn + rollover churn
+            const midSizedOrganicRetained = Math.round(prevMidSizedStudents * (1 - BASE_ASSUMPTIONS.midSized.organicChurn));
+            const midSizedRolloverLoss = i === 0 ? 0 : Math.round(prevMidSizedStudents / BASE_ASSUMPTIONS.midSized.avgStudentLife);
+            const midSizedNewStudents = Math.max(0, midSizedStudents - midSizedOrganicRetained + midSizedRolloverLoss);
             const midSizedMarketing = midSizedNewStudents * (BASE_ASSUMPTIONS.midSized.tofMarketing + BASE_ASSUMPTIONS.midSized.bofMarketing);
             // Annual facilities operating cost (blended per school)
             const midSizedAnnualFacilities = midSizedSchools * (
@@ -283,9 +295,12 @@
               BASE_ASSUMPTIONS.flagship.timeback
             ) * params.costInflation;
 
-            // Calculate new students for marketing (growth + organic churn + rollover churn replacement)
-            const flagshipChurnRate = BASE_ASSUMPTIONS.flagship.organicChurn + (1 / BASE_ASSUMPTIONS.flagship.avgStudentLife);
-            const flagshipNewStudents = Math.max(0, Math.round(flagshipStudents - prevFlagshipStudents * (1 - flagshipChurnRate)));
+            // Calculate new students for marketing
+            // Year 1: only organic churn (no prior cohort to roll over)
+            // Year 2+: organic churn + rollover churn
+            const flagshipOrganicRetained = Math.round(prevFlagshipStudents * (1 - BASE_ASSUMPTIONS.flagship.organicChurn));
+            const flagshipRolloverLoss = i === 0 ? 0 : Math.round(prevFlagshipStudents / BASE_ASSUMPTIONS.flagship.avgStudentLife);
+            const flagshipNewStudents = Math.max(0, flagshipStudents - flagshipOrganicRetained + flagshipRolloverLoss);
             const flagshipMarketing = flagshipNewStudents * (BASE_ASSUMPTIONS.flagship.tofMarketing + BASE_ASSUMPTIONS.flagship.bofMarketing);
             // Annual facilities operating cost
             const flagshipAnnualFacilities = flagshipSchools * BASE_ASSUMPTIONS.flagship.annualFacilitiesPerSchool;
